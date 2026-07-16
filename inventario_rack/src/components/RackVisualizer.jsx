@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { TYPES, UNIT_H } from '../constants/types'
 
 export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDevice }) {
-  // Estado opcional para dar un feedback visual de "ranura activa" cuando arrastras encima de ella
+  // Estado para dar un feedback visual de "ranura activa" cuando arrastras encima de ella
   const [dragOverUnit, setDragOverUnit] = useState(null)
 
   // 1. Construir las filas físicas del rack (de arriba hacia abajo)
@@ -22,13 +22,11 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
 
   // --- Handlers de Drag and Drop ---
   const handleDragStart = (e, deviceId) => {
-    // Almacena el ID del componente que se va a mover
     e.dataTransfer.setData('text/plain', deviceId)
     e.dataTransfer.effectAllowed = 'move'
   }
 
   const handleDragOver = (e, unit) => {
-    // Prevenir el comportamiento por defecto es OBLIGATORIO para permitir el "Drop"
     e.preventDefault()
     setDragOverUnit(unit)
   }
@@ -47,7 +45,7 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
   }
 
   return (
-    <div className="rackapp-side">
+    <>
       {/* Indicador superior de capacidad / ocupación */}
       <div className="rackapp-util">
         <div className="rackapp-util-row">
@@ -78,12 +76,12 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
 
                 <div
                   className="rackapp-device"
-                  draggable="true" // Habilita que el elemento se pueda arrastrar
+                  draggable="true"
                   onDragStart={(e) => handleDragStart(e, r.device.id)}
                   style={{ 
                     background: TYPES[r.device.type].color, 
                     color: TYPES[r.device.type].color,
-                    cursor: 'grab' // Cambia el cursor para indicar que es arrastrable
+                    cursor: 'grab'
                   }}
                   onDragEnd={() => setDragOverUnit(null)}
                 >
@@ -92,9 +90,12 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
                   
                   <div className="rackapp-device-text">
                     <span className="rackapp-device-model">{r.device.model}</span>
+                    
+                    {/* AQUÍ SE AGREGÓ LA MUESTRA DE LA IP */}
                     <span className="rackapp-device-sub">
                       {r.device.sn} · U{r.device.startU}
                       {r.device.sizeU > 1 ? `–U${r.device.startU + r.device.sizeU - 1}` : ''}
+                      {r.device.ip && ` · IP: ${r.device.ip}`}
                     </span>
                   </div>
                 </div>
@@ -112,7 +113,6 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
                 key={`u${r.unit}`} 
                 style={{ 
                   height: UNIT_H,
-                  // Si estamos arrastrando sobre esta ranura, pintamos un borde o color sutil
                   backgroundColor: dragOverUnit === r.unit ? '#232B38' : 'transparent',
                   transition: 'background-color 0.15s ease'
                 }}
@@ -134,6 +134,6 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDe
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

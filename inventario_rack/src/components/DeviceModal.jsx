@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { TYPES } from '../constants/types'
 import { IconX } from './Icons'
 
-const emptyForm = { type: 'servidor', model: '', sn: '', sizeU: 1, startU: '' }
+// 1. Añadimos ip y adminUrl al estado vacío inicial
+const emptyForm = { type: 'servidor', model: '', sn: '', sizeU: 1, startU: '', ip: '', adminUrl: '' }
 
 export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
   const [form, setForm] = useState(emptyForm)
@@ -43,6 +44,8 @@ export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
     const model = form.model.trim()
     const sn = form.sn.trim()
     const sizeU = parseInt(form.sizeU, 10)
+    const ip = form.ip.trim()
+    const adminUrl = form.adminUrl.trim()
 
     // Validaciones básicas de campos
     if (!model) return setError('El modelo es obligatorio.')
@@ -78,7 +81,7 @@ export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
       }
     }
 
-    // Instancia del nuevo dispositivo
+    // Instancia del nuevo dispositivo (con las propiedades ip y adminUrl)
     const newDevice = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       type: form.type,
@@ -86,12 +89,12 @@ export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
       sn,
       sizeU,
       startU,
+      ip,       // Guardamos la IP
+      adminUrl, // Guardamos la URL
     }
 
     onSave(newDevice)
   }
-
-  
 
   return (
     <div className="rackapp-modal-overlay" onClick={onClose}>
@@ -143,6 +146,28 @@ export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
               value={form.sn}
               onChange={(e) => setForm({ ...form, sn: e.target.value })}
             />
+          </div>
+
+          {/* NUEVOS CAMPOS: Dirección IP y URL de Administración */}
+          <div className="rackapp-field-row">
+            <div className="rackapp-field">
+              <label>Dirección IP (Opcional)</label>
+              <input
+                type="text"
+                placeholder="p. ej. 192.168.1.50"
+                value={form.ip}
+                onChange={(e) => setForm({ ...form, ip: e.target.value })}
+              />
+            </div>
+            <div className="rackapp-field">
+              <label>Enlace de Admin (Opcional)</label>
+              <input
+                type="text" // Usamos text para que acepte IPs directas sin forzar http:// obligatoriamente
+                placeholder="p. ej. http://192.168.1.50"
+                value={form.adminUrl}
+                onChange={(e) => setForm({ ...form, adminUrl: e.target.value })}
+              />
+            </div>
           </div>
 
           {/* Inputs de tamaño y posición en paralelo */}
