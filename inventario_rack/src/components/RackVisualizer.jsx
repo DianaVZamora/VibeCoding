@@ -1,23 +1,48 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { TYPES, UNIT_H } from '../constants/types'
 
-export default function RackVisualizer({ rackSize, devices, usedU, pct }) {
-  
+export default function RackVisualizer({ rackSize, devices, usedU, pct, onMoveDevice }) {
+  // Estado opcional para dar un feedback visual de "ranura activa" cuando arrastras encima de ella
+  const [dragOverUnit, setDragOverUnit] = useState(null)
+
   // 1. Construir las filas físicas del rack (de arriba hacia abajo)
   const rows = []
   let row = rackSize
 
   while (row >= 1) {
-    // Buscamos si hay algún dispositivo que termine en la unidad actual
     const dev = devices.find((d) => row === d.startU + d.sizeU - 1)
     if (dev) {
-      // Si existe, insertamos el componente completo y saltamos su altura en U
       rows.push({ kind: 'device', device: dev, top: row })
       row -= dev.sizeU
     } else {
-      // Si no hay nada, agregamos una fila "U" vacía
       rows.push({ kind: 'empty', unit: row })
       row -= 1
+    }
+  }
+
+  // --- Handlers de Drag and Drop ---
+  const handleDragStart = (e, deviceId) => {
+    // Almacena el ID del componente que se va a mover
+    e.dataTransfer.setData('text/plain', deviceId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e, unit) => {
+    // Prevenir el comportamiento por defecto es OBLIGATORIO para permitir el "Drop"
+    e.preventDefault()
+    setDragOverUnit(unit)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverUnit(null)
+  }
+
+  const handleDrop = (e, targetUnit) => {
+    e.preventDefault()
+    setDragOverUnit(null)
+    const deviceId = e.dataTransfer.getData('text/plain')
+    if (deviceId && onMoveDevice) {
+      onMoveDevice(deviceId, targetUnit)
     }
   }
 
@@ -26,11 +51,10 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct }) {
       {/* Indicador superior de capacidad / ocupación */}
       <div className="rackapp-util">
         <div className="rackapp-util-row">
-          <span>Ocupación</span>
+          <span>Ocupación (Arrastra los componentes para moverlos)</span>
           <span>{usedU}U / {rackSize}U</span>
         </div>
         <div className="rackapp-util-track">
-          {/* Barra de progreso con gradiente */}
           <div className="rackapp-util-fill" style={{ width: `${pct}%` }} />
         </div>
       </div>
@@ -40,30 +64,32 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct }) {
         <div className="rackapp-rack-scroll">
           {rows.map((r) =>
             r.kind === 'device' ? (
-              // Fila ocupada por un dispositivo real
+              // DISPOSITIVO ARRASTRABLE
               <div 
                 className="rackapp-rack-row" 
                 key={r.device.id} 
                 style={{ height: r.device.sizeU * UNIT_H }}
               >
-                {/* Riel izquierdo de montaje (orificios/holes) */}
                 <div className="rackapp-rail">
                   {Array.from({ length: r.device.sizeU }).map((_, i) => (
                     <span className="rackapp-hole" key={i} />
                   ))}
                 </div>
 
-                {/* Chasis del equipo pintado con su color representativo */}
                 <div
                   className="rackapp-device"
-                  style={{ background: TYPES[r.device.type].color, color: TYPES[r.device.type].color }}
+                  draggable="true" // Habilita que el elemento se pueda arrastrar
+                  onDragStart={(e) => handleDragStart(e, r.device.id)}
+                  style={{ 
+                    background: TYPES[r.device.type].color, 
+                    color: TYPES[r.device.type].color,
+                    cursor: 'grab' // Cambia el cursor para indicar que es arrastrable
+                  }}
+                  onDragEnd={() => setDragOverUnit(null)}
                 >
-                  {/* Efecto de rejilla de ventilación por CSS */}
                   <div className="rackapp-device-vents" />
-                  {/* Pequeña luz LED de encendido */}
                   <span className="rackapp-device-led" />
                   
-                  {/* Datos del hardware */}
                   <div className="rackapp-device-text">
                     <span className="rackapp-device-model">{r.device.model}</span>
                     <span className="rackapp-device-sub">
@@ -73,7 +99,6 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct }) {
                   </div>
                 </div>
 
-                {/* Riel derecho de montaje */}
                 <div className="rackapp-rail">
                   {Array.from({ length: r.device.sizeU }).map((_, i) => (
                     <span className="rackapp-hole" key={i} />
@@ -81,12 +106,26 @@ export default function RackVisualizer({ rackSize, devices, usedU, pct }) {
                 </div>
               </div>
             ) : (
-              // Fila de espacio en blanco (U vacía)
-              <div className="rackapp-rack-row" key={`u${r.unit}`} style={{ height: UNIT_H }}>
+              // RANURA VACÍA (ZONA DE SOLTAR)
+              <div 
+                className="rackapp-rack-row" 
+                key={`u${r.unit}`} 
+                style={{ 
+                  height: UNIT_H,
+                  // Si estamos arrastrando sobre esta ranura, pintamos un borde o color sutil
+                  backgroundColor: dragOverUnit === r.unit ? '#232B38' : 'transparent',
+                  transition: 'background-color 0.15s ease'
+                }}
+                onDragOver={(e) => handleDragOver(e, r.unit)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, r.unit)}
+              >
                 <div className="rackapp-rail">
                   <span className="rackapp-hole" />
                 </div>
-                <div className="rackapp-slot">U{r.unit}</div>
+                <div className="rackapp-slot" style={{ color: dragOverUnit === r.unit ? '#F2A73B' : '#4A5568' }}>
+                  U{r.unit} {dragOverUnit === r.unit ? '← Soltar aquí' : ''}
+                </div>
                 <div className="rackapp-rail">
                   <span className="rackapp-hole" />
                 </div>

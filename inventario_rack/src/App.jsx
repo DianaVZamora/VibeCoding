@@ -20,6 +20,37 @@ function App() {
     setDevices((prev) => prev.filter((d) => d.id !== id))
   }
 
+  const handleMoveDevice = (deviceId, newStartU) => {
+    setDevices((prev) => {
+      const targetDevice = prev.find((d) => d.id === deviceId)
+      if (!targetDevice) return prev
+
+      // Validar que el dispositivo no se salga por arriba del rack
+      if (newStartU + targetDevice.sizeU - 1 > rackSize) return prev
+
+      // Validar colisiones con otros dispositivos (excluyendo el que estamos moviendo)
+      const occupiedUnits = new Set()
+      prev.forEach((d) => {
+        if (d.id === deviceId) return
+        for (let u = d.startU; u <= d.startU + d.sizeU - 1; u++) {
+          occupiedUnits.add(u)
+        }
+      })
+
+      for (let u = newStartU; u <= newStartU + targetDevice.sizeU - 1; u++) {
+        if (occupiedUnits.has(u)) return prev // Hay colisión, cancelar movimiento
+      }
+
+      // Si todo está libre, actualizar la posición del dispositivo
+      const updated = prev.map((d) => 
+        d.id === deviceId ? { ...d, startU: newStartU } : d
+      )
+      
+      // Volver a ordenar para que la renderización física se mantenga consistente
+      return updated.sort((a, b) => b.startU - a.startU)
+    })
+  }
+
   // 2. Cálculos globales de utilidad y porcentajes de espacio usado
   const usedU = devices.reduce((acc, d) => acc + d.sizeU, 0)
   const pct = Math.min(100, Math.round((usedU / rackSize) * 100))
@@ -181,6 +212,7 @@ function App() {
             devices={devices} 
             usedU={usedU} 
             pct={pct} 
+            onMoveDevice={handleMoveDevice}
           />
         </div>
       </div>

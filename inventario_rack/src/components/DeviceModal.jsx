@@ -91,6 +91,8 @@ export default function DeviceModal({ rackSize, devices, onClose, onSave }) {
     onSave(newDevice)
   }
 
+  
+
   return (
     <div className="rackapp-modal-overlay" onClick={onClose}>
       <div className="rackapp-modal" onClick={(e) => e.stopPropagation()}>
